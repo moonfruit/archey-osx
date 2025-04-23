@@ -4,58 +4,57 @@
 
 # Detect the packager.
 if command -v brew >/dev/null; then
-  detectedpackager=homebrew
+    detectedpackager=homebrew
 elif command -v port >/dev/null; then
-  detectedpackager=macports
+    detectedpackager=macports
 else
-  detectedpackager=none
+    detectedpackager=none
 fi
 
 # Get the command line options
 opt_nocolor=f
 opt_force_color=f
 opt_offline=f
-for arg in "$@"
-do
-  case "${arg}" in
-    -p|--packager)
-      packager=$detectedpackager
-      ;;
-    -m|--macports)
-      packager=macports
-      ;;
-    -b|--nocolor)
-      opt_nocolor=t
-      ;;
-    -c|--color)
-      opt_nocolor=f
-      opt_force_color=t
-      ;;
-    -o|--offline)
+for arg in "$@"; do
+    case "${arg}" in
+    -p | --packager)
+        packager=$detectedpackager
+        ;;
+    -m | --macports)
+        packager=macports
+        ;;
+    -b | --nocolor)
+        opt_nocolor=t
+        ;;
+    -c | --color)
+        opt_nocolor=f
+        opt_force_color=t
+        ;;
+    -o | --offline)
         opt_offline=t
         ;;
-    -l|--localip)
-		opt_localip=t
-      ;;
-    -h|--help)
-      echo "Archey OS X 1.6.1"
-      echo
-      echo "Usage: $0 [options]"
-      echo
-      echo "  -p --packager  Use auto detected package system (default packager: ${detectedpackager})."
-      echo "  -m --macports  Force use MacPorts as package system."
-      echo "  -b --nocolor   Turn color off."
-      echo "  -c --color     Force the color on (overrides --nocolor)."
-      echo "  -o --offline   Disable the IP address check."
-      echo "  -l --localip   Show local IP adddress"
-      exit 0
-      ;;
+    -l | --localip)
+        opt_localip=t
+        ;;
+    -h | --help)
+        echo "Archey OS X 1.6.1"
+        echo
+        echo "Usage: $0 [options]"
+        echo
+        echo "  -p --packager  Use auto detected package system (default packager: ${detectedpackager})."
+        echo "  -m --macports  Force use MacPorts as package system."
+        echo "  -b --nocolor   Turn color off."
+        echo "  -c --color     Force the color on (overrides --nocolor)."
+        echo "  -o --offline   Disable the IP address check."
+        echo "  -l --localip   Show local IP adddress"
+        exit 0
+        ;;
     *)
-      echo "Unknown argument: $1" 1>&2
-      echo "For help, use: $0 --help" 1>&2
-      exit 1
-      ;;
-  esac
+        echo "Unknown argument: $1" 1>&2
+        echo "For help, use: $0 --help" 1>&2
+        exit 1
+        ;;
+    esac
 done
 
 # System Variables
@@ -64,28 +63,28 @@ hostname=$(hostname | sed 's/.local//g')
 
 # wan ip detection
 if [[ $opt_offline = f ]]; then
-  ipfile="${HOME}/.archey-ip"
-  if find "$ipfile" -mmin -360 >/dev/null 2>&1; then
-    while read -r line; do
-      ip="$line"
-    done < "$ipfile"
-  else
-    #ip=$(curl -sS eth0.me)
-    ip=$(curl -sS ifconfig.co)
-    echo "$ip" > "$ipfile"
-  fi
+    ipfile="${HOME}/.archey-ip"
+    if find "$ipfile" -mmin -360 >/dev/null 2>&1; then
+        while read -r line; do
+            ip="$line"
+        done <"$ipfile"
+    else
+        #ip=$(curl -sS eth0.me)
+        ip=$(curl -sS ifconfig.co)
+        echo "$ip" >"$ipfile"
+    fi
 fi
 
 if [[ $opt_localip = t ]]; then
-  # Get the interface used for the default route
-  active_adapter=$(route -n get 0.0.0.0 | awk '/interface: / {print $2}')
-  # Now get the IP address assigned to that interface
-  localip=$(ifconfig "$active_adapter" | awk '/inet / {print $2}')
+    # Get the interface used for the default route
+    active_adapter=$(route -n get 0.0.0.0 | awk '/interface: / {print $2}')
+    # Now get the IP address assigned to that interface
+    localip=$(ifconfig "$active_adapter" | awk '/inet / {print $2}' | paste -sd ';' -)
 fi
 
 distro="macOS $(sw_vers -productVersion)"
 kernel=$(uname)
-uptime=$(uptime 2> /dev/null | sed -e 's/.*up\s*//' -e 's/,\s*[0-9]* user.*//')
+uptime=$(uptime 2>/dev/null | sed -e 's/.*up\s*//' -e 's/,\s*[0-9]* user.*//')
 shell="$SHELL"
 terminal="$TERM ${TERM_PROGRAM//_/ }"
 cpu=$(sysctl -n machdep.cpu.brand_string)
@@ -94,33 +93,31 @@ battery=$(ioreg -c AppleSmartBattery -r | awk '$1~/Capacity/{c[$1]=$3} END{OFMT=
 # removes (R) and (TM) from the CPU name so it fits in a standard 80 window
 cpu=$(echo "$cpu" | awk '$1=$1' | sed 's/([A-Z]\{1,2\})//g')
 
-ram="$(( $(sysctl -n hw.memsize) / 1024 ** 3  )) GB"
+ram="$(($(sysctl -n hw.memsize) / 1024 ** 3)) GB"
 disk=$(df /System/Volumes/Data | tail -1 | awk '{print $5}')
-
 
 # Set up colors if:
 # * stdout is a tty
 # * the user hasn't turned it off
 # * or if we're forcing color
-if [[ ( -t 1  && "${opt_nocolor}" = f) || "${opt_force_color}" = t ]]
-then
-  RED=$(tput       setaf 1 2>/dev/null)
-  GREEN=$(tput     setaf 2 2>/dev/null)
-  YELLOW=$(tput    setaf 3 2>/dev/null)
-  BLUE=$(tput      setaf 4 2>/dev/null)
-  PURPLE=$(tput    setaf 5 2>/dev/null)
-  textColor=$(tput setaf 6 2>/dev/null)
-  normal=$(tput    sgr0 2>/dev/null)
+if [[ (-t 1 && "${opt_nocolor}" = f) || "${opt_force_color}" = t ]]; then
+    RED=$(tput setaf 1 2>/dev/null)
+    GREEN=$(tput setaf 2 2>/dev/null)
+    YELLOW=$(tput setaf 3 2>/dev/null)
+    BLUE=$(tput setaf 4 2>/dev/null)
+    PURPLE=$(tput setaf 5 2>/dev/null)
+    textColor=$(tput setaf 6 2>/dev/null)
+    normal=$(tput sgr0 2>/dev/null)
 fi
 
 case "${packager}" in
-  homebrew)
+homebrew)
     packagehandler=$(brew list -1 | wc -l | awk '{print $1 }')
     ;;
-  macports)
+macports)
     packagehandler=$(port installed | wc -l | awk '{print $1 }')
     ;;
-  *)
+*)
     packagehandler=0
     ;;
 esac
@@ -133,19 +130,19 @@ fieldlist[${#fieldlist[@]}]="${textColor}Uptime:${normal} ${uptime}${normal}"
 fieldlist[${#fieldlist[@]}]="${textColor}Shell:${normal} ${shell}${normal}"
 fieldlist[${#fieldlist[@]}]="${textColor}Terminal:${normal} ${terminal}${normal}"
 if [[ ${packagehandler} -ne 0 ]]; then
-  fieldlist[${#fieldlist[@]}]="${textColor}Packages:${normal} ${packagehandler}${normal}"
+    fieldlist[${#fieldlist[@]}]="${textColor}Packages:${normal} ${packagehandler}${normal}"
 fi
 fieldlist[${#fieldlist[@]}]="${textColor}CPU:${normal} ${cpu}${normal}"
 fieldlist[${#fieldlist[@]}]="${textColor}Memory:${normal} ${ram}${normal}"
 fieldlist[${#fieldlist[@]}]="${textColor}Disk:${normal} ${disk}${normal}"
 if [[ ! -z $battery ]]; then
-  fieldlist[${#fieldlist[@]}]="${textColor}Battery:${normal} ${battery}%${normal}"
+    fieldlist[${#fieldlist[@]}]="${textColor}Battery:${normal} ${battery}%${normal}"
 fi
 if [[ $opt_offline = f ]]; then
-  fieldlist[${#fieldlist[@]}]="${textColor}Wan IP:${normal} ${ip}${normal}"
+    fieldlist[${#fieldlist[@]}]="${textColor}Wan IP:${normal} ${ip}${normal}"
 fi
 if [[ $opt_localip = t ]]; then
-	fieldlist[${#fieldlist[@]}]="${textColor}Lan IP:${normal} ${localip}${normal}"
+    fieldlist[${#fieldlist[@]}]="${textColor}Lan IP:${normal} ${localip}${normal}"
 fi
 
 echo -e "
